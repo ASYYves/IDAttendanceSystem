@@ -6,4 +6,8 @@
     <Nullable>enable</Nullable>
   </PropertyGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\IDSystemBusinessLogic\IDSystemBusinessLogic.csproj" />
+  </ItemGroup>
+
 </Project>

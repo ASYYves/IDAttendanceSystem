@@ -8,8 +8,17 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\ClassLibrary2\ClassLibrary2.csproj" />
-    <ProjectReference Include="..\ClassLibrary3\ClassLibrary3.csproj" />
+    <Compile Remove="IDSystemBusinessLogic\**" />
+    <Compile Remove="IDSystemGUI\**" />
+    <EmbeddedResource Remove="IDSystemBusinessLogic\**" />
+    <EmbeddedResource Remove="IDSystemGUI\**" />
+    <None Remove="IDSystemBusinessLogic\**" />
+    <None Remove="IDSystemGUI\**" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="IDSystemBusinessLogic\IDSystemBusinessLogic.csproj" />
+    <ProjectReference Include="IDSystemGUI\IDSystemGUI.csproj" />
   </ItemGroup>
 
 </Project>
