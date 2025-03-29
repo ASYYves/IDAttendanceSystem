@@ -4,11 +4,12 @@ using IDSystemBusinessLogic;
 
 namespace IDAttendance
 {
+
     internal class Program
     {
+
         static void Main(string[] args)
         {
-
             //ATTENDANCE TRACKER USING STUDENTS' IDs
 
 
@@ -21,13 +22,14 @@ namespace IDAttendance
             string studentIdInput = Displays.getStudentID(inputProcess);
 
 
-            Displays.processAttendance(inputProcess, studentIdInput);
+            Checking.processAttendance(inputProcess, studentIdInput);
+
+
+            string displayName = Checking.processAttendance(inputProcess, studentIdInput);
+            Console.WriteLine(displayName);
 
 
         }
-
-
-        
 
 
     }
