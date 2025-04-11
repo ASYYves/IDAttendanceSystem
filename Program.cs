@@ -10,24 +10,50 @@ namespace IDAttendance
 
         static void Main(string[] args)
         {
+
+
             //ATTENDANCE TRACKER USING STUDENTS' IDs
 
 
             Console.WriteLine("Welcome PUPian! \n");
 
 
-            int inputProcess = Displays.getInput();
+            while (true)
+            {
 
 
-            string studentIdInput = Displays.getStudentID(inputProcess);
+                string studentIdInput = Displays.studentId;
 
 
-            Checking.processAttendance(inputProcess, studentIdInput);
+                
+                //for ending the loop
+                if (studentIdInput.ToLower() == "ex")
+                {
 
 
-            string displayName = Checking.processAttendance(inputProcess, studentIdInput);
-            Console.WriteLine(displayName);
+                    Console.WriteLine("LOOP ENDS");
+                    break;
 
+
+                }
+
+
+                //for getting student info
+                Checking.studentId = studentIdInput;
+
+
+                //displaying info
+                Displays.DisplayStudentInfo();
+
+
+                //giving space for next input
+                Console.WriteLine("\n\n");
+                
+               
+                
+            }
+
+            
 
         }
 

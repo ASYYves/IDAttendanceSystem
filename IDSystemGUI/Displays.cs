@@ -10,121 +10,78 @@ namespace IDSystemGUI
     public class Displays
     {
 
-
-        public static int getInput()
+        //calling all method
+        public static void DisplayStudentInfo()
         {
+            
 
-
-            int inputProcess;
-
-
-            //check if the inputted number is correct (1 or 2)
-            do
-            {
-
-
-                //for listing the 2 process
-                string[] process = { "1 - Clock-in", "2 - Clock-out", "3 - Check Schedule", "4 - View Attendance" };
-                Console.WriteLine("Are you clocking in or out?");
-
-
-                foreach (string display in process)
-                {
-
-
-                    Console.WriteLine(display);
-
-
-                }
-
-
-                //for inputting what process should be done
-                Console.Write("\nEnter Number: ");
-
-
-                /*
-                 * for checking if the number entered are 1 or 2, 
-                 * if not, will reask the question and display invalid number
-                 */
-                if (!int.TryParse(Console.ReadLine(), out inputProcess) || (inputProcess < 1 || inputProcess > 4))
-                {
-
-
-                    Console.WriteLine("\nInvalid number.\n");
-
-
-                }
-
-
-            }
-
-
-            //if input are not 1 and 2, the question will repeat, will not continue to next art
-            while (inputProcess < 1 || inputProcess > 4);
-
-
-            return inputProcess;
+            Console.WriteLine($"\nWelcome, {Checking.studentName}!");
+            Console.WriteLine(Checking.inOrout());
+            Console.WriteLine(Checking.getSched());
+            Console.WriteLine(Checking.getRecord());
 
 
         }
 
 
-        public static string getStudentID(int inputProcess)
+        public static string studentId
         {
 
-
-            //for inputting the id
-            string studentIdInput;
-
-
-            /*
-             * checking if the inputted id is correct
-             * if true the question while not be repeated
-             */
-            bool checkIdInput = false;
-
-
-            do
+            //only get ID and check
+            get
             {
 
 
-                //for entering id number
-                Console.Write("\nEnter Your ID Number: ");
-                studentIdInput = Console.ReadLine();
+                string studentIdInput;
+                bool checkId = false;
 
 
-                if (Checking.checkIDIfValid(studentIdInput))
-                {
-
-                    // if ID is valid, continue to next step
-                    checkIdInput = true;
-
-
-                }
-
-
-                else
+                do
                 {
 
 
-                    Console.WriteLine("Cannot find your ID in the database, \nPlease check your inputted ID and try again.");
+                    Console.Write("Enter Your ID Number: ");
+                    studentIdInput = Console.ReadLine();
 
 
-                }
+
+                    if (studentIdInput.ToLower() == "ex")
+                        return studentIdInput;
+
+
+                    if (Checking.checkId(studentIdInput))
+                    {
+
+
+                        checkId = true;
+
+
+                    }
+
+
+                    else
+                    {
+
+
+                        Console.WriteLine("ID not found. Please try again.\n");
+
+                    }
+
+
+                } 
+                
+                
+                while (!checkId);
+
+
+                return studentIdInput;
 
 
             }
 
 
-            //if id is wrong, question will repeat and will not continue to switch statement
-            while (!checkIdInput);
-
-
-            return studentIdInput;
-
-
         }
 
-
+  
     }
 }

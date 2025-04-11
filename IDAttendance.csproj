@@ -9,15 +9,19 @@
 
   <ItemGroup>
     <Compile Remove="IDSystemBusinessLogic\**" />
+    <Compile Remove="IDSystemData\**" />
     <Compile Remove="IDSystemGUI\**" />
     <EmbeddedResource Remove="IDSystemBusinessLogic\**" />
+    <EmbeddedResource Remove="IDSystemData\**" />
     <EmbeddedResource Remove="IDSystemGUI\**" />
     <None Remove="IDSystemBusinessLogic\**" />
+    <None Remove="IDSystemData\**" />
     <None Remove="IDSystemGUI\**" />
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="IDSystemBusinessLogic\IDSystemBusinessLogic.csproj" />
+    <ProjectReference Include="IDSystemData\IDSystemData.csproj" />
     <ProjectReference Include="IDSystemGUI\IDSystemGUI.csproj" />
   </ItemGroup>
 
