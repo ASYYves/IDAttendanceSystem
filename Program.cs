@@ -1,6 +1,7 @@
 ﻿using System;
 using IDSystemGUI;
 using IDSystemBusinessLogic;
+using IDSystemData;
 
 namespace IDAttendance
 {
@@ -15,11 +16,26 @@ namespace IDAttendance
             //ATTENDANCE TRACKER USING STUDENTS' IDs
 
 
-            Console.WriteLine("Welcome PUPian! \n");
+            //run on txt file
+            string studentFilePath = "StudentsData.txt";
+            Data.LoadStudentData(studentFilePath);
+            string attendancePath = "StudentsAttendance.txt";
+            Checking.setAttendanceOfStudents(attendancePath);
 
 
+            //run on json file
+            //string studentFilePath = "DataStudents.json";
+            //dataOfStudents.LoadStudentData(studentFilePath);
+            //string attendancePath = "AttendanceStudents.json";
+            //Checking.setAttendanceOfStudents(attendancePath);
+
+
+            //loop the whole program
             while (true)
             {
+
+
+                Console.WriteLine("Welcome PUPian! \n");
 
 
                 string studentIdInput = Displays.studentId;
@@ -59,4 +75,6 @@ namespace IDAttendance
 
 
     }
+
+
 }

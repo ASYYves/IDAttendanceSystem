@@ -3,87 +3,70 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using System.IO;
 using IDSystemData;
 
 namespace IDSystemBusinessLogic
 {
+
+
     public class Checking
     {
 
-        //getting student id
-        public static string studentId 
-        {
-            
 
-            get; 
-            set; 
-        
-
-        }
+        public static string studentId { get; set; }
 
 
-        public static string studentName =>
-            Data.validIds.TryGetValue(studentId, out string name) ? name : "who you";
+        public static string studentName 
+            => DataStorage.validIDs.TryGetValue(studentId, out string name) ? name : "Unknown";
 
 
-        //check ID valid
         public static bool checkId(string studentIdInput)
         {
 
 
-            return Data.validIds.ContainsKey(studentIdInput);
+            return DataStorage.validIDs.ContainsKey(studentIdInput);
 
 
         }
 
 
-        //process schedule
         public static string getSched()
         {
 
 
-            return Data.attendances.TryGetValue(studentId, out string schedule) ? schedule : "no sched";
+            return DataStorage.Attendances.TryGetValue(studentId, out string schedule) ? schedule : "no sched";
 
 
         }
 
 
-        //create random value for late and absent
         public static string getRecord()
         {
 
 
-            Random random = new Random();
-            int lates = random.Next(1, 10);
-            int absents = random.Next(1, 10);
-
-
-            return
-                $"Lates: {lates}\n" +
-                $"Absents: {absents}";
+            var recordAttendance = DataStorage.logAttendanceofStudents.GetAttendance(studentId);
+            return $"Lates: {recordAttendance.Lates}\nAbsents: {recordAttendance.Absents}";
 
 
         }
 
 
-        //for storing In or Out
-        private static readonly Dictionary<string, bool> clockInorOut = new Dictionary<string, bool>();
+        private static readonly Dictionary<string, bool> clokingINorOUT = new Dictionary<string, bool>();
 
 
-        //process if In or Out
         public static string inOrout()
         {
 
 
-            bool ifClockIn = false;
+            var ifClockIN = false;
 
-            //check if ID is valid
-            if (clockInorOut.TryGetValue(studentId, out ifClockIn))
+
+            if (clokingINorOUT.TryGetValue(studentId, out ifClockIN))
             {
 
 
-                //if clock out
-                clockInorOut[studentId] = !ifClockIn;
+                clokingINorOUT[studentId] = !ifClockIN;
 
 
             }
@@ -93,19 +76,53 @@ namespace IDSystemBusinessLogic
             {
 
 
-                //if clock in
-                clockInorOut[studentId] = true;
+                clokingINorOUT[studentId] = true;
 
 
             }
 
 
-            //display message 
-            return clockInorOut[studentId] ? "You are clocked in.\n" : "You are clocked out.\n";
+            var ifIN = clokingINorOUT[studentId];
+            var action = ifIN ? "clocked in" : "clocked out";
+
+
+            DataStorage.logAttendanceofStudents.LogAttendance(studentId, ifIN);
+
+
+            return ifIN ? "You are clocked in." : "Goodbye! You are clocked out.";
 
 
         }
 
-        
+
+        public static void setAttendanceOfStudents(string path)
+        {
+
+
+            if (path.EndsWith(".json"))
+            {
+
+
+                DataStorage.logAttendanceofStudents = new storeAttendanceToJSON(path);
+
+
+            }
+
+
+            else
+            {
+
+
+                DataStorage.logAttendanceofStudents = new storeAttendancetoTXT(path);
+
+
+            }
+
+
+        }
+
+
     }
+
+
 }

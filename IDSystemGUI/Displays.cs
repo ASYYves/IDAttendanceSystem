@@ -15,7 +15,7 @@ namespace IDSystemGUI
         {
             
 
-            Console.WriteLine($"\nWelcome, {Checking.studentName}!");
+            Console.WriteLine($"\nHello, {Checking.studentName}!");
             Console.WriteLine(Checking.inOrout());
             Console.WriteLine(Checking.getSched());
             Console.WriteLine(Checking.getRecord());
@@ -84,4 +84,6 @@ namespace IDSystemGUI
 
   
     }
+
+
 }
