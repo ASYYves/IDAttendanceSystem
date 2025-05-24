@@ -18,7 +18,7 @@ namespace IDAttendance
 
             //run on txt file
             string studentFilePath = "StudentsData.txt";
-            Data.LoadStudentData(studentFilePath);
+            Data.loadDataOfStudents(studentFilePath);
             string attendancePath = "StudentsAttendance.txt";
             Checking.setAttendanceOfStudents(attendancePath);
 
@@ -27,6 +27,12 @@ namespace IDAttendance
             //string studentFilePath = "DataStudents.json";
             //dataOfStudents.LoadStudentData(studentFilePath);
             //string attendancePath = "AttendanceStudents.json";
+            //Checking.setAttendanceOfStudents(attendancePath);
+
+
+            //string studentFilePath = "db";
+            //Data.loadDataOfStudents(studentFilePath);
+            //string attendancePath = "db";
             //Checking.setAttendanceOfStudents(attendancePath);
 
 
@@ -63,7 +69,7 @@ namespace IDAttendance
 
 
                 //giving space for next input
-                Console.WriteLine("\n\n");
+                Console.WriteLine("\n\n\n\n");
                 
                
                 

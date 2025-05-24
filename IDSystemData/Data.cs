@@ -27,7 +27,7 @@ namespace IDSystemData
     {
 
 
-        void LogAttendance(string studentId, bool clockedIn);
+        void logAttendanceOfStudents(string studentId, bool clockedIn);
 
 
         recordOfAttendance GetAttendance(string studentId);
@@ -64,7 +64,7 @@ namespace IDSystemData
         }
 
 
-        public void LogAttendance(string studentId, bool clockedIn)
+        public void logAttendanceOfStudents(string studentId, bool clockedIn)
         {
 
 
@@ -158,7 +158,7 @@ namespace IDSystemData
         }
 
 
-        public void LogAttendance(string studentId, bool clockedIn)
+        public void logAttendanceOfStudents(string studentId, bool clockedIn)
         {
 
 
@@ -204,7 +204,7 @@ namespace IDSystemData
     public static class Data
     {
 
-        public static void LoadStudentData(string filePath)
+        public static void loadDataOfStudents(string filePath)
         {
 
 
@@ -235,6 +235,18 @@ namespace IDSystemData
 
 
                 }
+
+
+            }
+
+
+            else if (filePath == "db")
+            {
+
+
+                DBData db = new DBData();
+                DataStorage.validIDs = db.LoadStudents();
+                DataStorage.Attendances = db.LoadSchedules();
 
 
             }
@@ -286,7 +298,7 @@ namespace IDSystemData
 
 
                     }
-
+                    //txt until here
 
                 }
 

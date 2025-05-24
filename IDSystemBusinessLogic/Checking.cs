@@ -86,7 +86,7 @@ namespace IDSystemBusinessLogic
             var action = ifIN ? "clocked in" : "clocked out";
 
 
-            DataStorage.logAttendanceofStudents.LogAttendance(studentId, ifIN);
+            DataStorage.logAttendanceofStudents.logAttendanceOfStudents(studentId, ifIN);
 
 
             return ifIN ? "You are clocked in." : "Goodbye! You are clocked out.";
@@ -104,6 +104,16 @@ namespace IDSystemBusinessLogic
 
 
                 DataStorage.logAttendanceofStudents = new storeAttendanceToJSON(path);
+
+
+            }
+
+
+            else if (path == "db")
+            {
+
+
+                DataStorage.logAttendanceofStudents = new DBData();
 
 
             }
