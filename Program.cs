@@ -1,86 +1,71 @@
-﻿using System;
-using IDSystemGUI;
-using IDSystemBusinessLogic;
+﻿using IDSystemBusinessLogic;
 using IDSystemData;
+using IDSystemData.IDSystemData;
+using IDSystemGUI;
+using System;
+using System.Threading;
 
 namespace IDAttendance
 {
 
-    internal class Program
+    class Program
     {
+
 
         static void Main(string[] args)
         {
 
 
-            //ATTENDANCE TRACKER USING STUDENTS' IDs
+            //db, json, or txt
+            const string modeOfStorage = "db";
+            var studentStorageType = modeOfStorage == "db" ? "db": modeOfStorage == "json" ? "DataStudents.json" : "StudentsAttendance.txt";
+            var attendanceStorageType = modeOfStorage == "db" ? "db" : modeOfStorage == "json" ? "AttendanceStudents.json" : "StudentsAttendance.txt";
 
 
-            //run on txt file
-            string studentFilePath = "StudentsData.txt";
-            Data.loadDataOfStudents(studentFilePath);
-            string attendancePath = "StudentsAttendance.txt";
-            Checking.setAttendanceOfStudents(attendancePath);
+            //call type of storage to use
+            var toStoreStudent = storageFormat.selectStudentStorage(modeOfStorage, studentStorageType);
+            var toStoreAttendance = storageFormat.selectAttendanceStorage(modeOfStorage, attendanceStorageType);
 
 
-            //run on json file
-            //string studentFilePath = "DataStudents.json";
-            //dataOfStudents.LoadStudentData(studentFilePath);
-            //string attendancePath = "AttendanceStudents.json";
-            //Checking.setAttendanceOfStudents(attendancePath);
+            //start business logic
+            Checking.setStorageLocation(toStoreStudent, toStoreAttendance);
 
 
-            //string studentFilePath = "db";
-            //Data.loadDataOfStudents(studentFilePath);
-            //string attendancePath = "db";
-            //Checking.setAttendanceOfStudents(attendancePath);
-
-
-            //loop the whole program
+            //loop until exit
             while (true)
             {
 
 
-                Console.WriteLine("Welcome PUPian! \n");
+                Console.WriteLine("Welcome PUPIan!\n");
+                Checking.AutoClockOutAll(TimeSpan.FromMinutes(10));
 
 
-                string studentIdInput = Displays.studentId;
-
-
-                
-                //for ending the loop
-                if (studentIdInput.ToLower() == "ex")
+                //return ex, admin or valid ID
+                var id = Displays.StudentId;
+                if (id.Equals("ex", StringComparison.OrdinalIgnoreCase))
                 {
 
 
-                    Console.WriteLine("LOOP ENDS");
+                    Console.WriteLine("Loop ends");
                     break;
 
 
                 }
 
 
-                //for getting student info
-                Checking.studentId = studentIdInput;
+                //show student info
+                Displays.displayStudentInfo();
+                Console.WriteLine("\n\n\n");
 
 
-                //displaying info
-                Displays.DisplayStudentInfo();
-
-
-                //giving space for next input
-                Console.WriteLine("\n\n\n\n");
-                
-               
-                
             }
 
-            
 
         }
 
 
+
     }
 
-
+    
 }

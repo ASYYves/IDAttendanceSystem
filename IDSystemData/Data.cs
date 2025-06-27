@@ -1,112 +1,208 @@
-﻿using System;
+﻿using Microsoft.Data.SqlClient;
+using Newtonsoft.Json;
+using System;
 using System.Collections.Generic;
+using System.Globalization;
+using System.IO;
 using System.Linq;
 using System.Text.Json;
 using System.Threading.Tasks;
-using System.IO;
 using System.Xml;
-using Newtonsoft.Json;
 using JsonFormatting = Newtonsoft.Json.Formatting;
 
 namespace IDSystemData
 {
 
-    public static class DataStorage
+    namespace IDSystemData
     {
 
 
-        public static Dictionary<string, string> validIDs = new();
-        public static Dictionary<string, string> Attendances = new();
-        public static loggingAttendanceToFile logAttendanceofStudents;
-
-
-    }
-
-
-    public interface loggingAttendanceToFile
-    {
-
-
-        void logAttendanceOfStudents(string studentId, bool clockedIn);
-
-
-        recordOfAttendance GetAttendance(string studentId);
-
-
-    }
-
-
-    public class recordOfAttendance
-    {
-
-
-        public int Lates { get; set; }
-        public int Absents { get; set; }
-
-
-    }
-
-
-    public class storeAttendancetoTXT : loggingAttendanceToFile
-    {
-
-
-        private readonly string filePath;
-
-
-        public storeAttendancetoTXT(string path)
+        public class dbStorage : studentStorageLocation, attendanceStorageLocation
         {
 
 
-            filePath = path;
+            private readonly DBData db = new DBData();
 
 
-        }
 
+            //if DB exists, load students and attendance logs
+            public bool checkIfFormatOfStorage(string studentId) => db.LoadStudents().ContainsKey(studentId);
 
-        public void logAttendanceOfStudents(string studentId, bool clockedIn)
-        {
+            public string getName(string studentId) => db.getStudentData(studentId).Name;
 
-
-            File.AppendAllText(filePath, $"{studentId},{clockedIn},{DateTime.Now}\n");
-
-
-        }
-
-
-        public recordOfAttendance GetAttendance(string studentId)
-        {
-
-
-            var record = new recordOfAttendance();
-
-
-            if (File.Exists(filePath))
+            public string getSchedule(string studentId)
             {
 
 
-                var lines = File.ReadAllLines(filePath);
+                var schedules = db.LoadSchedules();
+                return schedules.TryGetValue(studentId, out var sched) ? sched : string.Empty;
 
 
-                foreach (var line in lines)
+            }
+
+            public bool addStudentToStorage(string studentId, string name, List<string> schedule) => db.addNewStudentToDB(studentId, name, string.Join("\n", schedule));
+
+            public bool updateSchduleToStorage(string studentId, List<string> newSchedule) => db.updateSchedule(studentId, string.Join("\n", newSchedule));
+
+            public bool deleteScheduleToStorage(string studentId) => db.deleteStudentFromDB(studentId);
+
+            public List<(string StudentId, string Name)> listAllStudentsFromStorage() => db.listAllIDs();
+
+            public void logAttendanceToStorage(string studentId, bool isClockIn) => db.logAttendanceOfStudents(studentId, isClockIn);
+
+            public List<(DateTime Timestamp, bool IsClockIn)> getLogsFromStorage(string studentId) => db.getAttendanceLogs(studentId);
+
+            public (int Lates, int Absents) getRecordsFromStorage(string studentId)
+            {
+
+
+                var rec = db.getStudentData(studentId);
+                return (rec.Lates, rec.Absents);
+
+
+            }
+
+            public void addLatesToStorage(string studentId) => db.addLates(studentId);
+
+            public void addAbsentsToStorage(string studentId) => db.IncrementAbsents(studentId);
+
+
+        }
+
+
+        
+
+        /// <summary>Master data: students + schedules</summary>
+        public interface studentStorageLocation
+        {
+            bool checkIfFormatOfStorage(string studentId);
+            string getName(string studentId);
+            string getSchedule(string studentId);               // multi‐line string
+            bool addStudentToStorage(string studentId, string name, List<string> schedule);
+            bool updateSchduleToStorage(string studentId, List<string> newSchedule);
+            bool deleteScheduleToStorage(string studentId);
+            List<(string StudentId, string Name)> listAllStudentsFromStorage();
+        }
+
+        /// <summary>Attendance log: clock‐in/out & counts</summary>
+        public interface attendanceStorageLocation
+        {
+            void logAttendanceToStorage(string studentId, bool isClockIn);
+            List<(DateTime Timestamp, bool IsClockIn)> getLogsFromStorage(string studentId);
+            (int Lates, int Absents) getRecordsFromStorage(string studentId);
+            void addLatesToStorage(string studentId);
+            void addAbsentsToStorage(string studentId);
+        }
+
+        
+
+        
+
+        public static class storageFormat
+        {
+            public static studentStorageLocation selectStudentStorage(string mode, string path)
+            {
+                if (mode == "db")
+                    return new dbStorage();        //change here
+
+                if (mode.EndsWith(".json", StringComparison.OrdinalIgnoreCase))
+                    return new jsonStudentStorage(path);
+
+                if (mode.EndsWith(".txt", StringComparison.OrdinalIgnoreCase))
+                    return new txtStudentStorage(path);
+
+                throw new ArgumentException($"Unknown student mode: {mode}");
+            }
+
+            public static attendanceStorageLocation selectAttendanceStorage(string mode, string path)
+            {
+                if (mode == "db")
+                    return new dbStorage();        //and change here
+
+                if (mode.EndsWith(".json", StringComparison.OrdinalIgnoreCase))
+                    return new jsonAttendanceStorage(path);
+
+                if (mode.EndsWith(".txt", StringComparison.OrdinalIgnoreCase))
+                    return new txtAttendanceStore(path);
+
+                throw new ArgumentException($"Unknown attendance mode: {mode}");
+            }
+        }
+
+
+
+        //txt storage implementations for students
+        public class txtStudentStorage : studentStorageLocation
+        {
+
+
+            private readonly string file;
+
+            public txtStudentStorage(string filePath) => file = filePath;
+
+            public bool checkIfFormatOfStorage(string studentId) => File.Exists(file) && File.ReadLines(file).Any(l => l.Split(',')[0] == studentId);
+
+            public string getName(string studentId)
+            {
+
+                if (!checkIfFormatOfStorage(studentId)) 
+                    return "";
+
+
+                return File.ReadLines(file).First(l => l.Split('|')[0] == studentId).Split('|')[1];
+
+
+            }
+
+            public string getSchedule(string studentId)
+            {
+
+
+                if (!checkIfFormatOfStorage(studentId)) 
+                    return "";
+
+
+                var parts = File.ReadLines(file).First(l => l.Split('|')[0] == studentId).Split('|', 3);
+                return parts.Length < 3 ? "" : parts[2].Replace(';', '\n');
+            }
+
+            public bool addStudentToStorage(string studentId, string name, List<string> schedule)
+            {
+
+
+                if (checkIfFormatOfStorage(studentId)) 
+                    return false;
+
+
+                var line = $"{studentId},{name},{string.Join(';', schedule)}";
+                File.AppendAllLines(file, new[] { line });
+                return true;
+
+
+            }
+
+            public bool updateSchduleToStorage(string studentId, List<string> newSchedule)
+            {
+
+
+                if (!checkIfFormatOfStorage(studentId)) 
+                    return false;
+
+
+                var all = File.ReadAllLines(file).ToList();
+
+
+                for (int i = 0; i < all.Count; i++)
                 {
 
 
-                    var parts = line.Split(',');
-
-
-                    if (parts[0] == studentId)
+                    var p = all[i].Split(',', 3);
+                    if (p[0] == studentId)
                     {
 
 
-                        if (bool.TryParse(parts[1], out bool isIn) && !isIn)
-                        {
-
-
-                            record.Lates++;
-
-
-                        }
+                        all[i] = $"{studentId},{p[1]},{string.Join(';', newSchedule)}";
+                        break;
 
 
                     }
@@ -115,214 +211,253 @@ namespace IDSystemData
                 }
 
 
+                File.WriteAllLines(file, all);
+                return true;
+
+
             }
 
+            public bool deleteScheduleToStorage(string studentId)
+            {
 
-            return record;
+                if (!checkIfFormatOfStorage(studentId)) 
+                    return false;
+
+
+                var keep = File.ReadAllLines(file).Where(lines => lines.Split(',')[0] != studentId);
+                File.WriteAllLines(file, keep);
+                return true;
+
+
+            }
+
+            public List<(string StudentId, string Name)> listAllStudentsFromStorage() => File.Exists(file) ? File.ReadAllLines(file).Select(l => l.Split('|')).Where(p => p.Length >= 2).Select(p => (p[0], p[1])).ToList() : new();
 
 
         }
 
 
-    }
-
-
-    public class storeAttendanceToJSON : loggingAttendanceToFile
-    {
-
-
-        private readonly string filePath;
-
-
-        private Dictionary<string, recordOfAttendance> attendanceData = new();
-
-
-        public storeAttendanceToJSON(string path)
+        //txt storage implementation for attendance logs
+        public class txtAttendanceStore : attendanceStorageLocation
         {
+            private readonly string file;
 
+            public txtAttendanceStore(string filePath) => file = filePath;
 
-            filePath = path;
+            public void logAttendanceToStorage(string studentId, bool isClockIn) => File.AppendAllText(file, $"{studentId},{isClockIn},{DateTime.Now:O}\n");
 
-
-            if (File.Exists(filePath))
+            public List<(DateTime Timestamp, bool IsClockIn)> getLogsFromStorage(string studentId)
             {
 
 
-                string json = File.ReadAllText(filePath);
-                attendanceData = JsonConvert.DeserializeObject<Dictionary<string, recordOfAttendance>>(json) ?? new();
+                if (!File.Exists(file)) 
+                    return new();
+
+
+                return File.ReadAllLines(file).Select(l => l.Split(',')).Where(p => p.Length == 3 && p[0] == studentId).Select(p => (Timestamp: DateTime.Parse(p[2], null, DateTimeStyles.RoundtripKind), IsClockIn: bool.Parse(p[1]))).ToList();
 
 
             }
 
 
-        }
-
-
-        public void logAttendanceOfStudents(string studentId, bool clockedIn)
-        {
-
-
-            if (!attendanceData.ContainsKey(studentId))
+            public (int Lates, int Absents) getRecordsFromStorage(string studentId)
             {
 
 
-                attendanceData[studentId] = new recordOfAttendance();
+                var lines = getLogsFromStorage(studentId);
+                int lates = lines.Count(l => !l.IsClockIn);
+                return (lates, 0);
 
 
             }
 
+            public void addLatesToStorage(string studentId) => logAttendanceToStorage(studentId, false);
 
-            if (!clockedIn)
+            public void addAbsentsToStorage(string studentId) => logAttendanceToStorage(studentId, false);
+
+
+        }
+
+
+
+        //json storage implementations for students
+        public class jsonStudentStorage : studentStorageLocation
+        {
+
+
+            private readonly string file;
+            private List<StudentRecord> data;
+
+            public jsonStudentStorage(string filePath)
             {
 
 
-                attendanceData[studentId].Lates++;
+                file = filePath;
+                if (File.Exists(file))
+                    data = JsonConvert.DeserializeObject<List<StudentRecord>>(File.ReadAllText(file)) ?? new();
+
+
+                else
+
+
+                    data = new();
 
 
             }
 
+            public bool checkIfFormatOfStorage(string studentId) => data.Any(s => s.Id == studentId);
 
-            File.WriteAllText(filePath, JsonConvert.SerializeObject(attendanceData, JsonFormatting.Indented));
+            public string getName(string studentId) => data.FirstOrDefault(s => s.Id == studentId)?.Name ?? "";
 
+            public string getSchedule(string studentId) => data.FirstOrDefault(s => s.Id == studentId) is var rec && rec != null ? string.Join("\n", rec.Schedule) : "";
 
-        }
-
-
-        public recordOfAttendance GetAttendance(string studentId)
-        {
-
-
-            return attendanceData.TryGetValue(studentId, out var record) ? record : new recordOfAttendance();
-
-
-        }
-
-
-    }
-
-
-    public static class Data
-    {
-
-        public static void loadDataOfStudents(string filePath)
-        {
-
-
-            if (!File.Exists(filePath)) return;
-
-
-            if (filePath.EndsWith(".json"))
+            public bool addStudentToStorage(string studentId, string name, List<string> schedule)
             {
 
 
-                var json = File.ReadAllText(filePath);
-                var students = JsonConvert.DeserializeObject<List<Student>>(json);
+                if (checkIfFormatOfStorage(studentId)) 
+                    return false;
 
 
-                if (students != null)
+                data.Add(new StudentRecord
                 {
 
 
-                    foreach (var student in students)
-                    {
+                    Id = studentId,
+                    Name = name,
+                    Schedule = schedule
 
 
-                        DataStorage.validIDs[student.Id] = student.Name;
-                        DataStorage.Attendances[student.Id] = $"\n--- Schedule ---\n{student.Schedule}\n";
+                });
 
 
-                    }
+                saveChanges();
+                return true;
 
 
-                }
+            }
+
+            public bool updateSchduleToStorage(string studentId, List<string> newSchedule)
+            {
+
+
+                var rec = data.FirstOrDefault(s => s.Id == studentId);
+                if (rec == null) 
+                    return false;
+
+
+                rec.Schedule = newSchedule;
+                saveChanges();
+                return true;
+
+
+            }
+
+            public bool deleteScheduleToStorage(string studentId)
+            {
+
+
+                var rec = data.FirstOrDefault(s => s.Id == studentId);
+                if (rec == null) 
+                    return false;
+
+
+                data.Remove(rec);
+                saveChanges();
+                return true;
+
+
+            }
+
+            public List<(string StudentId, string Name)> listAllStudentsFromStorage() => data.Select(s => (s.Id, s.Name)).ToList();
+
+            private void saveChanges() => File.WriteAllText(file, JsonConvert.SerializeObject(data, Newtonsoft.Json.Formatting.Indented));
+
+            private class StudentRecord
+            {
+
+
+                public string Id { get; set; }
+                public string Name { get; set; }
+                public List<string> Schedule { get; set; }
 
 
             }
 
 
-            else if (filePath == "db")
+        }
+
+
+
+
+        public class jsonAttendanceStorage : attendanceStorageLocation
+        {
+            private readonly string file;
+            private Dictionary<string, List<LogEntry>> data;
+
+            public jsonAttendanceStorage(string filePath)
             {
 
 
-                DBData db = new DBData();
-                DataStorage.validIDs = db.LoadStudents();
-                DataStorage.Attendances = db.LoadSchedules();
+                file = filePath;
+                if (File.Exists(file))
+                    data = JsonConvert.DeserializeObject<Dictionary<string, List<LogEntry>>>(File.ReadAllText(file)) ?? new();
+
+
+                else
+                    data = new();
 
 
             }
 
-
-            else
+            public void logAttendanceToStorage(string studentId, bool isClockIn)
             {
 
 
-                var lines = File.ReadAllLines(filePath);
+                if (!data.ContainsKey(studentId))
+                    data[studentId] = new();
 
 
-                foreach (var line in lines)
+                data[studentId].Add(new LogEntry
                 {
 
 
-                    //for json running
-                    //var parts = line.Split(',');
-                    //if (parts.Length == 2)
-                    //{
+                    Timestamp = DateTime.Now,
+                    IsClockIn = isClockIn
 
 
-                    //    DataStorage.validIDs[parts[0]] = parts[1];
-                    //}
+                });
 
 
-                    //for txt running
-                    var parts = line.Split('|');
-
-
-                    if (parts.Length >= 2)
-                    {
-
-
-                        string id = parts[0].Trim();
-                        string name = parts[1].Trim();
-                        DataStorage.validIDs[id] = name;
-
-
-                        if (parts.Length >= 3)
-                        {
-
-
-                            string timeIn = parts[2].Trim();
-                            DataStorage.Attendances[id] = $"\n--- Schedule ---\nTime In: {timeIn}";
-
-
-                        }
-
-
-                    }
-                    //txt until here
-
-                }
+                saveChanges();
 
 
             }
 
+            public List<(DateTime Timestamp, bool IsClockIn)> getLogsFromStorage(string studentId) => data.TryGetValue(studentId, out var list) ? list.Select(e => (e.Timestamp, e.IsClockIn)).ToList() : new();
 
+            public (int Lates, int Absents) getRecordsFromStorage(string studentId) => (data.TryGetValue(studentId, out var l) ? l.Count(e => !e.IsClockIn) : 0, 0);
+
+            public void addLatesToStorage(string studentId) => logAttendanceToStorage(studentId, false);
+
+            public void addAbsentsToStorage(string studentId) => logAttendanceToStorage(studentId, false);
+
+            private void saveChanges() => File.WriteAllText(file, JsonConvert.SerializeObject(data, Newtonsoft.Json.Formatting.Indented));
+
+            private class LogEntry
+            {
+
+
+                public DateTime Timestamp { get; set; }
+                public bool IsClockIn { get; set; }
+
+
+            }
         }
 
-
-        public class Student
-        {
-
-
-            public string Id { get; set; }
-            public string Name { get; set; }
-            public string Schedule { get; set; }
-
-
-        }
 
 
     }
-
-
+    
+    
 }
-

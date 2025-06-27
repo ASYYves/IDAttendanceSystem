@@ -1,72 +1,75 @@
-﻿using System;
+﻿using IDSystemData;
+using IDSystemData.IDSystemData;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
-using System.Threading.Tasks;
-using System.IO;
-using IDSystemData;
 
 namespace IDSystemBusinessLogic
 {
 
-
-    public class Checking
+    public static class Checking
     {
 
 
-        public static string studentId { get; set; }
+        ///locations for students and attendance logs
+        static studentStorageLocation storingStudents;
+        static attendanceStorageLocation storingAttendances;
 
 
-        public static string studentName 
-            => DataStorage.validIDs.TryGetValue(studentId, out string name) ? name : "Unknown";
+
+        //id of the student currently being processed
+        public static string currentIDThatIsProcessed { get; private set; }
 
 
-        public static bool checkId(string studentIdInput)
+
+        //set the storage locations for students and attendances
+        public static void setStorageLocation(studentStorageLocation studentStore, attendanceStorageLocation attendanceStore)
         {
 
-
-            return DataStorage.validIDs.ContainsKey(studentIdInput);
-
+            storingStudents = studentStore;
+            storingAttendances = attendanceStore;
 
         }
 
 
-        public static string getSched()
+
+        //check if the ID exists in the student storage
+        public static bool checkId(string id) => storingStudents.checkIfFormatOfStorage(id);
+
+
+
+        //check if the ID exists in the attendance storage
+        public static void setCurrentID(string id) => currentIDThatIsProcessed = id;
+
+
+
+        //get name of the student by ID
+        public static string getStudentName() => storingStudents.getName(currentIDThatIsProcessed);
+
+
+
+        // get the schedule of the student by ID
+        public static string getSchedule() => storingStudents.getSchedule(currentIDThatIsProcessed);
+
+
+
+        //chck if student is in or out
+        public static string InOrOut()
         {
 
 
-            return DataStorage.Attendances.TryGetValue(studentId, out string schedule) ? schedule : "no sched";
+            var logs = storingAttendances.getLogsFromStorage(currentIDThatIsProcessed);
+            bool isIn = logs.LastOrDefault().IsClockIn && logs.Last().Timestamp.Date == DateTime.Today;
 
 
-        }
-
-
-        public static string getRecord()
-        {
-
-
-            var recordAttendance = DataStorage.logAttendanceofStudents.GetAttendance(studentId);
-            return $"Lates: {recordAttendance.Lates}\nAbsents: {recordAttendance.Absents}";
-
-
-        }
-
-
-        private static readonly Dictionary<string, bool> clokingINorOUT = new Dictionary<string, bool>();
-
-
-        public static string inOrout()
-        {
-
-
-            var ifClockIN = false;
-
-
-            if (clokingINorOUT.TryGetValue(studentId, out ifClockIN))
+            if (!isIn)
             {
 
 
-                clokingINorOUT[studentId] = !ifClockIN;
+                checkIfStudentIsLate();
+                storingAttendances.logAttendanceToStorage(currentIDThatIsProcessed, true);
+                return "You are clocked in.";
 
 
             }
@@ -76,63 +79,148 @@ namespace IDSystemBusinessLogic
             {
 
 
-                clokingINorOUT[studentId] = true;
+                storingAttendances.logAttendanceToStorage(currentIDThatIsProcessed, false);
+                return "Goodbye! You are clocked out.";
 
 
             }
 
 
-            var ifIN = clokingINorOUT[studentId];
-            var action = ifIN ? "clocked in" : "clocked out";
+        }
 
 
-            DataStorage.logAttendanceofStudents.logAttendanceOfStudents(studentId, ifIN);
+
+        //check if the student is late based on today’s schedule
+        static void checkIfStudentIsLate()
+        {
+
+            //get today’s schedule line for the current student
+            var todayLine = getSchedule().Split('\n', StringSplitOptions.RemoveEmptyEntries).FirstOrDefault(line =>line.Contains(DateTime.Today.DayOfWeek.ToString(),StringComparison.OrdinalIgnoreCase));
+            if (todayLine == null) return;
 
 
-            return ifIN ? "You are clocked in." : "Goodbye! You are clocked out.";
+            //parse the time part and check if it’s past the start time + 15 minutes
+            var timePart = todayLine.Split(':', 2)[1].Split('-', 2)[0].Trim();
+            if (DateTime.TryParse(timePart, out var start) && DateTime.Now.TimeOfDay > start.TimeOfDay.Add(TimeSpan.FromMinutes(15)))
+            {
+
+
+                storingAttendances.addLatesToStorage(currentIDThatIsProcessed);
+
+
+            }
 
 
         }
 
 
-        public static void setAttendanceOfStudents(string path)
+
+        //mark all students who are absent today
+        public static void CheckAllAbsents()
         {
 
 
-            if (path.EndsWith(".json"))
+            var today = DateTime.Today;
+            foreach (var (id, _) in storingStudents.listAllStudentsFromStorage())
             {
 
-
-                DataStorage.logAttendanceofStudents = new storeAttendanceToJSON(path);
-
-
-            }
+                //skip if any log today
+                if (storingAttendances.getLogsFromStorage(id).Any(l => l.Timestamp.Date == today)) continue;
 
 
-            else if (path == "db")
-            {
+                var line = storingStudents.getSchedule(id).Split('\n', StringSplitOptions.RemoveEmptyEntries).FirstOrDefault(lines =>lines.Contains(today.DayOfWeek.ToString(),StringComparison.OrdinalIgnoreCase));
+                if (line == null) continue;
 
 
-                DataStorage.logAttendanceofStudents = new DBData();
+                var timePart = line.Split(':', 2)[1].Split('-', 2)[0].Trim();
+                if (DateTime.TryParse(timePart, out var start) && DateTime.Now.TimeOfDay > start.TimeOfDay.Add(TimeSpan.FromMinutes(15)))
+                {
 
 
-            }
+                    storingAttendances.addAbsentsToStorage(id);
 
 
-            else
-            {
-
-
-                DataStorage.logAttendanceofStudents = new storeAttendancetoTXT(path);
+                }
 
 
             }
 
 
         }
+
+
+
+        //get the attendance record for the current student
+        public static (int Lates, int Absents) getRecord() => storingAttendances.getRecordsFromStorage(currentIDThatIsProcessed);
+
+
+
+        // Admin operations
+        public static bool adminAdd(string id, string name, List<string> sched) => storingStudents.addStudentToStorage(id, name, sched);
+
+        public static bool adminUpdate(string id, List<string> sched) => storingStudents.updateSchduleToStorage(id, sched);
+
+        public static bool adminDelete(string id) => storingStudents.deleteScheduleToStorage(id);
+
+        public static List<(string StudentId, string Name)> AdminListAll() => storingStudents.listAllStudentsFromStorage();
+
+
+
+        //automatically clock out all students who are still clocked in after the scheduled end time + grace period
+        public static void AutoClockOutAll(TimeSpan gracePeriod)
+        {
+
+
+            // for every student, if still clocked in past end+grace, auto log out
+            foreach (var (id, _) in storingStudents.listAllStudentsFromStorage())
+            {
+
+
+                //skip if no logs today or not clocked in
+                var logs = storingAttendances.getLogsFromStorage(id);
+                if (logs.Count == 0) continue;
+
+
+                //only care if they’re currently clocked in today
+                var last = logs.Last();
+                if (!last.IsClockIn || last.Timestamp.Date != DateTime.Today)
+                    continue;
+
+
+                //find today’s schedule line
+                var todayLine = storingStudents.getSchedule(id).Split('\n', StringSplitOptions.RemoveEmptyEntries).FirstOrDefault(l => l.Contains(DateTime.Today.DayOfWeek.ToString(), StringComparison.OrdinalIgnoreCase));
+                if (todayLine == null) continue;
+
+
+                //parse the end-time part
+                var endPart = todayLine.Split(':', 2)[1].Split('-', 2)[1].Trim();
+                if (!DateTime.TryParse(endPart, out var endTime))
+                    continue;
+
+
+                //build a DateTime for today’s scheduled end
+                var scheduledEnd = DateTime.Today.Add(endTime.TimeOfDay);
+
+
+                if (DateTime.Now > scheduledEnd.Add(gracePeriod))
+                {
+
+
+                    // auto log‐out
+                    storingAttendances.logAttendanceToStorage(id, false);
+
+
+                }
+
+
+            }
+
+
+        }
+
 
 
     }
 
-
+        
 }
