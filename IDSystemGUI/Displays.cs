@@ -102,7 +102,7 @@ namespace IDSystemGUI
                     if (Checking.checkId(input))
                     {
 
-
+                        
                         Checking.setCurrentID(input);
                         return input;
 

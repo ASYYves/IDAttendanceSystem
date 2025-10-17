@@ -53,6 +53,8 @@ namespace IDSystemBusinessLogic
         public static string getSchedule() => storingStudents.getSchedule(currentIDThatIsProcessed);
 
 
+        private static Email email = new Email();
+
 
         //chck if student is in or out
         public static string InOrOut()
@@ -69,6 +71,7 @@ namespace IDSystemBusinessLogic
 
                 checkIfStudentIsLate();
                 storingAttendances.logAttendanceToStorage(currentIDThatIsProcessed, true);
+                email.SendEmail("Yves", "2023-0001");
                 return "You are clocked in.";
 
 
@@ -217,6 +220,8 @@ namespace IDSystemBusinessLogic
 
 
         }
+
+        
 
 
 
