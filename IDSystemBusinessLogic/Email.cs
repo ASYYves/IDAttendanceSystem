@@ -1,41 +1,60 @@
 ﻿using MailKit.Net.Smtp;
 using MimeKit;
+using System;
 
-namespace IDSystemBusinessLogic;
-class Email
+namespace IDSystemBusinessLogic
 {
-    public void SendEmail(string student, string id)
+    
+    public static class Email
     {
-        var message = new MimeMessage();
+        
+        private static Smtp _settings;
 
-        message.From.Add(new MailboxAddress("PUPBC", "samplepupemail.com"));
-        message.To.Add(new MailboxAddress(student, id));
-        message.Subject = "Attendance";
-
- 
-        string emailText = $"You are now in\n{student}";
-
-        message.Body = new TextPart("plain")
+        
+        public static void Initialize(Smtp settings)
         {
-            Text = emailText
-        };
+            _settings = settings;
+        }
 
-        using (var client = new SmtpClient())
+        
+        public static void SendEmail(string student, string id)
         {
-            var smtpHost = "sandbox.smtp.mailtrap.io";
-            var smtpPort = 2525;
-            var tsl = MailKit.Security.SecureSocketOptions.StartTls;
+            
+            if (_settings == null)
+            {
+                
+                throw new InvalidOperationException("Email settings have not been initialized.");
 
-            client.Connect(smtpHost, smtpPort, tsl);
+            }
 
-            var username = "9e559ece15bd0b";
-            var password = "faf702ceac54db";
+            var message = new MimeMessage();
 
-            client.Authenticate(username, password);
+            
+            message.From.Add(new MailboxAddress(_settings.FromName, _settings.FromAddress));
+            message.To.Add(new MailboxAddress(student, id));
+            message.Subject = "Attendance";
 
-            client.Send(message);
-            client.Disconnect(true);
+            string emailText = $"You are now in\n{student}";
+            message.Body = new TextPart("plain")
+            {
+                Text = emailText
+            };
 
+            using (var client = new SmtpClient())
+            {
+                                var smtpHost = _settings.Host;
+                var smtpPort = _settings.Port;
+                var tsl = MailKit.Security.SecureSocketOptions.StartTls;
+
+                client.Connect(smtpHost, smtpPort, tsl);
+
+                var username = _settings.Username;
+                var password = _settings.Password;
+                client.Authenticate(username, password);
+
+                client.Send(message);
+                client.Disconnect(true);
+            }
         }
     }
 }

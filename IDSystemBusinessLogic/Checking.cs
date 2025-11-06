@@ -17,7 +17,6 @@ namespace IDSystemBusinessLogic
         static attendanceStorageLocation storingAttendances;
 
 
-
         //id of the student currently being processed
         public static string currentIDThatIsProcessed { get; private set; }
 
@@ -53,9 +52,6 @@ namespace IDSystemBusinessLogic
         public static string getSchedule() => storingStudents.getSchedule(currentIDThatIsProcessed);
 
 
-        private static Email email = new Email();
-
-
         //chck if student is in or out
         public static string InOrOut()
         {
@@ -71,7 +67,11 @@ namespace IDSystemBusinessLogic
 
                 checkIfStudentIsLate();
                 storingAttendances.logAttendanceToStorage(currentIDThatIsProcessed, true);
-                email.SendEmail("Yves", "2023-0001");
+
+                Email.SendEmail("Yves", "2023-0001");
+
+
+
                 return "You are clocked in.";
 
 
@@ -221,11 +221,10 @@ namespace IDSystemBusinessLogic
 
         }
 
+
+
         
-
-
-
     }
 
-        
+
 }

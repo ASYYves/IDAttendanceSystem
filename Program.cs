@@ -1,36 +1,86 @@
+using IDSystemBusinessLogic;
+using IDSystemData;
+using IDSystemData.IDSystemData;
+using IDSystemGUI;
+using System;
+using System.Threading;
+using Microsoft.Extensions.Configuration; 
+using System.IO; 
 
-namespace IDSystemWeb
+namespace IDAttendance
 {
-    public class Program
+
+    class Program
     {
-        public static void Main(string[] args)
+
+
+        static void Main(string[] args)
         {
-            var builder = WebApplication.CreateBuilder(args);
 
-            // Add services to the container.
 
-            builder.Services.AddControllers();
-            // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
-            builder.Services.AddEndpointsApiExplorer();
-            builder.Services.AddSwaggerGen();
+            
+            var builder = new ConfigurationBuilder().SetBasePath(Directory.GetCurrentDirectory()).AddJsonFile("appsettings.json", optional: false, reloadOnChange: true);
 
-            var app = builder.Build();
+            IConfiguration config = builder.Build();
 
-            // Configure the HTTP request pipeline.
-            if (app.Environment.IsDevelopment())
+            
+            var smtpSettings = config.GetSection("SmtpSettings").Get<Smtp>();
+
+            
+            Email.Initialize(smtpSettings);
+            
+
+
+            //db, json, or txt
+            const string modeOfStorage = "db";
+            var studentStorageType = modeOfStorage == "db" ? "db" : modeOfStorage == "json" ? "DataStudents.json" : "StudentsAttendance.txt";
+            var attendanceStorageType = modeOfStorage == "db" ? "db" : modeOfStorage == "json" ? "AttendanceStudents.json" : "StudentsAttendance.txt";
+
+
+            //call type of storage to use
+            var toStoreStudent = storageFormat.selectStudentStorage(modeOfStorage, studentStorageType);
+            var toStoreAttendance = storageFormat.selectAttendanceStorage(modeOfStorage, attendanceStorageType);
+
+
+            //start business logic
+            Checking.setStorageLocation(toStoreStudent, toStoreAttendance);
+
+
+            //loop until exit
+            while (true)
             {
-                app.UseSwagger();
-                app.UseSwaggerUI();
+
+
+                Console.WriteLine("Welcome PUPIan!\n");
+                Checking.AutoClockOutAll(TimeSpan.FromMinutes(10));
+
+
+                //return ex, admin or valid ID
+                var id = Displays.StudentId;
+                if (id.Equals("ex", StringComparison.OrdinalIgnoreCase))
+                {
+
+
+                    Console.WriteLine("Loop ends");
+                    break;
+
+
+                }
+
+
+                //show student info
+                Displays.displayStudentInfo();
+                Console.WriteLine("\n\n\n");
+
+
             }
 
-            app.UseHttpsRedirection();
 
-            app.UseAuthorization();
-
-
-            app.MapControllers();
-
-            app.Run();
         }
+
+
+
     }
+
+
 }
